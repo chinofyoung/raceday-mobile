@@ -1,57 +1,125 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { api } from "@/convex/_generated/api";
+import { registerForPushNotificationsAsync } from "@/lib/notifications";
+import { tokenCache } from "@/lib/tokenCache";
+import "@/lib/tracking/backgroundTask";
+import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/clerk-expo";
+import {
+  Barlow_300Light,
+  Barlow_400Regular,
+  Barlow_500Medium,
+  Barlow_600SemiBold,
+  Barlow_700Bold,
+} from "@expo-google-fonts/barlow";
+import {
+  BarlowCondensed_400Regular,
+  BarlowCondensed_500Medium,
+  BarlowCondensed_600SemiBold,
+  BarlowCondensed_700Bold,
+} from "@expo-google-fonts/barlow-condensed";
+import { ConvexReactClient, useMutation } from "convex/react";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { useFonts } from "expo-font";
+import * as Notifications from "expo-notifications";
+import { Slot, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import "react-native-reanimated";
+import { useCurrentUser } from "../lib/hooks/useCurrentUser";
 
-import { useColorScheme } from '@/components/useColorScheme';
+export { ErrorBoundary } from "expo-router";
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
-
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+const convex = new ConvexReactClient(
+  process.env.EXPO_PUBLIC_CONVEX_URL!
+);
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+function AuthGate() {
+  const { user, isLoaded: isUserLoaded } = useCurrentUser();
+  const { isSignedIn, isLoaded: isAuthLoaded } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+  const updatePushToken = useMutation(api.users.updatePushToken);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    if (isUserLoaded && user) {
+      // Register for push notifications
+      registerForPushNotificationsAsync().then((token) => {
+        if (token) {
+          updatePushToken({ expoPushToken: token }).catch((err: any) =>
+            console.error("Failed to update push token:", err)
+          );
+        }
+      });
+
+      // Handle notification tapping (deep linking)
+      const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+        const data = response.notification.request.content.data as any;
+        if (data?.announcementId) {
+          // In a real app, we'd navigate to the announcement detail
+          // For now, we'll just go to the events list
+          router.push("/(tabs)");
+        }
+      });
+
+      return () => subscription.remove();
     }
-  }, [loaded]);
+  }, [isUserLoaded, user]);
 
-  if (!loaded) {
-    return null;
-  }
+  useEffect(() => {
+    if (!isAuthLoaded) return;
 
-  return <RootLayoutNav />;
+    const currentGroup = segments[0];
+
+    if (!isSignedIn && currentGroup !== "(auth)") {
+      router.replace("/(auth)/login");
+    } else if (isSignedIn && currentGroup === "(auth)") {
+      router.replace("/(tabs)");
+    }
+  }, [isSignedIn, isAuthLoaded, segments]);
+
+  if (!isAuthLoaded) return null;
+
+  return <Slot />;
 }
 
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    BarlowCondensed_400Regular,
+    BarlowCondensed_500Medium,
+    BarlowCondensed_600SemiBold,
+    BarlowCondensed_700Bold,
+    Barlow_300Light,
+    Barlow_400Regular,
+    Barlow_500Medium,
+    Barlow_600SemiBold,
+    Barlow_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontError) throw fontError;
+  }, [fontError]);
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <ClerkProvider
+      publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
+      tokenCache={tokenCache}
+    >
+      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+        <ClerkLoaded>
+          <AuthGate />
+          <StatusBar style="light" />
+        </ClerkLoaded>
+      </ConvexProviderWithClerk>
+    </ClerkProvider>
   );
 }

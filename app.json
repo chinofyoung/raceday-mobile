@@ -1,28 +1,29 @@
 {
   "expo": {
-    "name": "raceday-mobile",
+    "name": "RaceDay",
     "slug": "raceday-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "racedaymobile",
-    "userInterfaceStyle": "automatic",
+    "scheme": "raceday",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1f2937"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.raceday.mobile"
     },
     "android": {
+      "package": "com.raceday.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1f2937",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false
+      }
     },
     "web": {
       "bundler": "metro",
@@ -30,7 +31,30 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "RaceDay needs your location to share your race progress with friends and family.",
+          "locationAlwaysPermission": "RaceDay needs background location to track your race progress even when the app is in the background.",
+          "locationWhenInUsePermission": "RaceDay needs your location to show your position on the race map.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-image",
+        {
+          "backgroundColor": "#1f2937"
+        }
+      ],
+      [
+        "expo-brightness",
+        {
+          "isAndroidNavigationBarTranslucent": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

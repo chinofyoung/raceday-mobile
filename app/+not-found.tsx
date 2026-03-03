@@ -1,40 +1,60 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
-
-import { Text, View } from '@/components/Themed';
+import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
+import { useRouter } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function NotFoundScreen() {
-  return (
-    <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>This screen doesn't exist.</Text>
+  const router = useRouter();
 
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
-        </Link>
-      </View>
-    </>
+  return (
+    <View style={styles.container}>
+      <Text style={styles.icon}>🏃</Text>
+      <Text style={styles.title}>Page Not Found</Text>
+      <Text style={styles.desc}>This screen doesn't exist.</Text>
+      <Pressable
+        style={({ pressed }) => [styles.button, pressed && { opacity: 0.8 }]}
+        onPress={() => router.replace("/(tabs)")}
+      >
+        <Text style={styles.buttonText}>GO TO EVENTS</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: Colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing["3xl"],
+  },
+  icon: {
+    fontSize: 64,
+    marginBottom: Spacing.xl,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: "BarlowCondensed_700Bold",
+    fontSize: FontSize["2xl"],
+    color: Colors.text,
+    textTransform: "uppercase",
   },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
+  desc: {
+    fontFamily: "Barlow_400Regular",
+    fontSize: FontSize.base,
+    color: Colors.textMuted,
+    marginTop: Spacing.sm,
   },
-  linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
+  button: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing["3xl"],
+    paddingVertical: Spacing.lg,
+    borderRadius: Radius.lg,
+    marginTop: Spacing["3xl"],
+  },
+  buttonText: {
+    fontFamily: "BarlowCondensed_700Bold",
+    fontSize: FontSize.base,
+    color: Colors.white,
+    letterSpacing: 1,
   },
 });
