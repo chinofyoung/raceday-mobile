@@ -9,12 +9,15 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function EventsScreen() {
   const { user, isLoaded } = useCurrentUser();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
+  // ... (keep previous logic)
   const registrations = useQuery(
     api.registrations.getByUserId,
     user ? { userId: user._id as Id<"users"> } : "skip"
@@ -31,7 +34,6 @@ export default function EventsScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // Convex auto-syncs, so just briefly show the spinner
     setTimeout(() => setRefreshing(false), 800);
   }, []);
 
@@ -65,11 +67,9 @@ export default function EventsScreen() {
         ]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          console.log("Event card pressed:", reg.eventId);
           router.push(`/events/${reg.eventId}?regId=${reg._id}`);
         }}
       >
-        {/* Event Image */}
         <Image
           source={{ uri: event.featuredImage || undefined }}
           style={styles.eventImage}
@@ -78,7 +78,6 @@ export default function EventsScreen() {
         />
         <View style={styles.imageOverlay} />
 
-        {/* Status Badge */}
         <View style={styles.badgeContainer}>
           <View
             style={[
@@ -97,7 +96,6 @@ export default function EventsScreen() {
           )}
         </View>
 
-        {/* Event Details */}
         <View style={styles.cardContent}>
           <Text style={styles.eventName} numberOfLines={2}>
             {event.name}
@@ -140,7 +138,7 @@ export default function EventsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(Spacing.lg, insets.top) }]}>
         <Text style={styles.headerTitle}>MY EVENTS</Text>
         <Text style={styles.headerSubtitle}>
           {registrations.length} registered event{registrations.length !== 1 ? "s" : ""}
@@ -169,7 +167,10 @@ export default function EventsScreen() {
             }
             return renderEventCard({ item: item.data });
           }}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: 110 + insets.bottom }
+          ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl

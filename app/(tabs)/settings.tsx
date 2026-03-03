@@ -3,11 +3,13 @@ import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Image } from "expo-image";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
     const { signOut } = useAuth();
     const { user: clerkUser } = useUser();
     const { user } = useCurrentUser();
+    const insets = useSafeAreaInsets();
 
     const handleSignOut = () => {
         Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -22,11 +24,11 @@ export default function SettingsScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(Spacing.lg, insets.top) }]}>
                 <Text style={styles.headerTitle}>SETTINGS</Text>
             </View>
 
-            <View style={styles.content}>
+            <View style={[styles.content, { paddingBottom: 110 + insets.bottom }]}>
                 {/* Profile Card */}
                 <View style={styles.profileCard}>
                     {clerkUser?.imageUrl ? (

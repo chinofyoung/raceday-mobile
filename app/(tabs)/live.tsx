@@ -9,6 +9,7 @@ import { useQuery } from "convex/react";
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 let MapView: any, Marker: any, Polyline: any, PROVIDER_DEFAULT: any;
 
@@ -23,6 +24,7 @@ if (Platform.OS !== 'web') {
 export default function LiveScreen() {
     const { user, isLoaded: isUserLoaded } = useCurrentUser();
     const mapRef = useRef<any>(null);
+    const insets = useSafeAreaInsets();
 
     const [selectedEventId, setSelectedEventId] = useState<Id<"events"> | null>(null);
     const [gpxPoints, setGpxPoints] = useState<LatLng[]>([]);
@@ -151,7 +153,7 @@ export default function LiveScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(Spacing.lg, insets.top) }]}>
                 <View>
                     <Text style={styles.headerTitle}>LIVE TRACK</Text>
                     <Text style={styles.headerSubtitle} numberOfLines={1}>
@@ -184,6 +186,7 @@ export default function LiveScreen() {
                         userInterfaceStyle="dark"
                         showsUserLocation={true}
                         showsMyLocationButton={true}
+                        mapPadding={{ top: 0, right: 0, bottom: 100 + insets.bottom, left: 0 }}
                         initialRegion={activeEvent?.location?.coordinates ? {
                             latitude: activeEvent.location.coordinates.lat,
                             longitude: activeEvent.location.coordinates.lng,
