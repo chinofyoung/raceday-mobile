@@ -1,5 +1,6 @@
 import { Colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { Tabs, useSegments } from "expo-router";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
@@ -21,7 +22,11 @@ function TabIcon({
           color={focused ? Colors.primary : Colors.textMuted}
         />
       </View>
-      <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{name}</Text>
+      <Text
+        style={[styles.tabLabel, focused && styles.tabLabelActive]}
+      >
+        {name}
+      </Text>
     </View>
   );
 }
@@ -40,6 +45,13 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: styles.tabBar,
+        tabBarBackground: () => (
+          <BlurView
+            intensity={80}
+            tint="dark"
+            style={StyleSheet.absoluteFill}
+          />
+        ),
       }}
     >
       <Tabs.Screen
@@ -76,45 +88,47 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 30 : 20,
+    bottom: Platform.OS === 'ios' ? 32 : 24,
     left: 20,
     right: 20,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(31, 41, 55, 0.7)',
     borderTopWidth: 0,
     elevation: 8,
-    height: 64,
-    borderRadius: 32,
+    height: 72,
+    borderRadius: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    paddingBottom: 0,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    paddingTop: 16,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   tabIconContainer: {
     alignItems: "center",
     justifyContent: "center",
-    height: '100%',
+    flex: 1,
+    minWidth: 60,
   },
   iconWrapper: {
-    width: 48,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
   },
   iconWrapperActive: {
-    backgroundColor: 'rgba(249, 115, 22, 0.12)',
+    backgroundColor: 'rgba(249, 115, 22, 0.15)',
   },
   tabLabel: {
     fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 10,
+    fontSize: 11,
     color: Colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    textAlign: 'center',
+    marginTop: 2,
   },
   tabLabelActive: {
     color: Colors.primary,
