@@ -71,7 +71,7 @@ export default function EventDetailScreen() {
 
                     <Pressable
                         style={[styles.shareButton, { top: Math.max(20, insets.top) }]}
-                        onPress={() => { }}
+                        onPress={() => {/* Share logic */ }}
                     >
                         <Share2 size={18} color={Colors.white} />
                     </Pressable>
@@ -97,6 +97,7 @@ export default function EventDetailScreen() {
 
                 {/* Content */}
                 <View style={styles.content}>
+                    {/* Status Alert if Registered */}
                     {isRegistered && (
                         <Animated.View entering={FadeIn.delay(400)} style={styles.statusAlert}>
                             <CheckCircle size={20} color={Colors.cta} />
@@ -109,10 +110,12 @@ export default function EventDetailScreen() {
                         </Animated.View>
                     )}
 
+                    {/* Description Section */}
                     <Section title="ABOUT THE RACE" icon={<Info size={16} color={Colors.primary} />}>
                         <Text style={styles.descriptionText}>{event.description}</Text>
                     </Section>
 
+                    {/* Race Categories Section */}
                     <Section title="CATEGORIES & PRICING" icon={<Award size={16} color={Colors.primary} />}>
                         <View style={styles.categoryList}>
                             {event.categories?.map((cat: any, index: number) => (
@@ -136,6 +139,7 @@ export default function EventDetailScreen() {
                         </View>
                     </Section>
 
+                    {/* Timeline Section */}
                     {event.timeline && event.timeline.length > 0 && (
                         <Section title="EVENT SCHEDULE" icon={<Clock size={16} color={Colors.primary} />}>
                             <View style={styles.timeline}>
@@ -157,11 +161,12 @@ export default function EventDetailScreen() {
                 </View>
             </ScrollView>
 
+            {/* Sticky Bottom Action */}
             <View style={[styles.bottomAction, { paddingBottom: Math.max(Spacing.xl, insets.bottom) }]}>
                 {isRegistered ? (
                     <Pressable
                         style={styles.primaryButton}
-                        onPress={() => router.push({ pathname: "/my-events" })}
+                        onPress={() => router.push({ pathname: "/(tabs)/my-events" })}
                     >
                         <Text style={styles.primaryButtonText}>VIEW MY REGISTRATION</Text>
                         <ChevronRight size={18} color={Colors.white} />
@@ -174,7 +179,7 @@ export default function EventDetailScreen() {
                         </View>
                         <Pressable
                             style={styles.registerButton}
-                            onPress={() => router.push({ pathname: "/events/[id]/register", params: { id } })}
+                            onPress={() => router.push({ pathname: "/event/[id]/register", params: { id } })}
                         >
                             <Text style={styles.registerButtonText}>REGISTER NOW</Text>
                         </Pressable>

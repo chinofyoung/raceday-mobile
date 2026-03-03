@@ -3,7 +3,8 @@ import { api } from "@/convex/_generated/api";
 import { registerForPushNotificationsAsync } from "@/lib/notifications";
 import { tokenCache } from "@/lib/tokenCache";
 import "@/lib/tracking/backgroundTask";
-import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { ClerkLoaded, ClerkProvider } from "@clerk/clerk-expo";
 import {
   Barlow_300Light,
   Barlow_400Regular,
@@ -26,7 +27,8 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
-import { useCurrentUser } from "../lib/hooks/useCurrentUser";
+import { useAuth as useClerkAuth } from "@clerk/clerk-expo";
+import { checkForUpdates } from "@/lib/updates";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -37,14 +39,13 @@ const convex = new ConvexReactClient(
 );
 
 function AuthCheck() {
-  const { user, isLoaded: isUserLoaded } = useCurrentUser();
-  const { isSignedIn, isLoaded: isAuthLoaded } = useAuth();
+  const { user, isLoaded, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const updatePushToken = useMutation(api.users.updatePushToken);
 
   useEffect(() => {
-    if (isUserLoaded && user) {
+    if (isLoaded && user) {
       // Register for push notifications
       registerForPushNotificationsAsync().then((token) => {
         if (token) {
@@ -58,28 +59,28 @@ function AuthCheck() {
       const subscription = Notifications.addNotificationResponseReceivedListener(response => {
         const data = response.notification.request.content.data as any;
         if (data?.announcementId) {
-          // In a real app, we'd navigate to the announcement detail
-          // For now, we'll just go to the events list
           router.push("/(tabs)");
         }
       });
 
       return () => subscription.remove();
     }
-  }, [isUserLoaded, user]);
+  }, [isLoaded, user]);
 
   useEffect(() => {
-    if (!isAuthLoaded) return;
+    if (!isLoaded) return;
 
     const currentGroup = segments[0];
     if (!currentGroup) return;
 
-    if (!isSignedIn && currentGroup !== "(auth)") {
+    const inAuthGroup = currentGroup === "(auth)";
+
+    if (!isSignedIn && !inAuthGroup) {
       router.replace("/(auth)/login");
-    } else if (isSignedIn && currentGroup === "(auth)") {
+    } else if (isSignedIn && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [isSignedIn, isAuthLoaded, segments]);
+  }, [isSignedIn, isLoaded, segments]);
 
   return null;
 }
@@ -98,6 +99,10 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    checkForUpdates();
+  }, []);
+
+  useEffect(() => {
     if (fontError) throw fontError;
   }, [fontError]);
 
@@ -114,13 +119,12 @@ export default function RootLayout() {
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
       tokenCache={tokenCache}
     >
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <ConvexProviderWithClerk client={convex} useAuth={useClerkAuth}>
         <ClerkLoaded>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />
-            <Stack.Screen name="events" />
             <Stack.Screen name="+not-found" />
           </Stack>
           <AuthCheck />

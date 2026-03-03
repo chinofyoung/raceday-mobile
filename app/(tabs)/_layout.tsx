@@ -52,9 +52,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Events",
+          title: "Browse",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="Events" focused={focused} iconName={focused ? "calendar" : "calendar-outline"} />
+            <TabIcon name="Browse" focused={focused} iconName={focused ? "compass" : "compass-outline"} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="my-events"
+        options={{
+          title: "My Events",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="My Events" focused={focused} iconName={focused ? "calendar" : "calendar-outline"} />
           ),
         }}
       />
@@ -72,13 +81,14 @@ export default function TabLayout() {
         options={{
           title: "Settings",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="Settings" focused={focused} iconName={focused ? "settings" : "settings-outline"} />
+            <TabIcon name="Settings" focused={focused} iconName={focused ? "person" : "person-outline"} />
           ),
         }}
       />
     </Tabs>
   );
 }
+
 
 const styles = StyleSheet.create({
   tabBar: {

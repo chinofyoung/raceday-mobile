@@ -1,186 +1,174 @@
 import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
-import { useQuery } from "convex/react";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { usePaginatedQuery } from "convex/react";
 import { format } from "date-fns";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { ArrowRight, Calendar, MapPin, Search, Users } from "lucide-react-native";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function EventsScreen() {
-  const { user, isLoaded } = useCurrentUser();
+/**
+ * Browse Events Screen (Landing Tab)
+ * Allows runners to discover and explore upcoming race events.
+ */
+export default function BrowseScreen() {
+  const { isLoaded } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  // ... (keep previous logic)
-  const registrations = useQuery(
-    api.registrations.getByUserId,
-    user ? { userId: user._id as Id<"users"> } : "skip"
-  );
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchDebounced(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const { upcoming, past } = useMemo(() => {
-    if (!registrations) return { upcoming: [], past: [] };
-    const now = Date.now();
-    return {
-      upcoming: registrations.filter((r: any) => r.event && r.event.date > now),
-      past: registrations.filter((r: any) => r.event && r.event.date <= now),
-    };
-  }, [registrations]);
+  // Fetch published events from Convex with pagination
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.events.list,
+    { search: searchDebounced, status: "published" } as any,
+    { initialNumItems: 10 }
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 800);
   }, []);
 
-  if (!isLoaded || registrations === undefined) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>MY EVENTS</Text>
-        </View>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading events...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  const renderEventCard = ({ item: reg }: { item: any }) => {
-    const event = reg.event;
-    if (!event) return null;
-
+  const renderEventCard = ({ item: event }: { item: any }) => {
     const eventDate = new Date(event.date);
-    const category = event.categories?.find((c: any) => c.id === reg.categoryId);
-    const isPast = event.date <= Date.now();
 
     return (
       <Pressable
         style={({ pressed }) => [
-          styles.eventCard,
-          isPast && styles.eventCardPast,
+          styles.card,
           pressed && styles.cardPressed,
         ]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.push(`/events/${reg.eventId}?regId=${reg._id}`);
+          router.push({
+            pathname: "/events/[id]",
+            params: { id: event._id }
+          });
         }}
       >
         <Image
           source={{ uri: event.featuredImage || undefined }}
-          style={styles.eventImage}
+          style={styles.cardImage}
           contentFit="cover"
           transition={200}
         />
-        <View style={styles.imageOverlay} />
-
-        <View style={styles.badgeContainer}>
-          <View
-            style={[
-              styles.statusBadge,
-              reg.status === "paid" ? styles.badgePaid : styles.badgePending,
-            ]}
-          >
-            <Text style={styles.badgeText}>
-              {reg.status === "paid" ? "CONFIRMED" : "PENDING"}
-            </Text>
-          </View>
-          {reg.raceKitClaimed && (
-            <View style={styles.kitBadge}>
-              <Text style={styles.badgeText}>KIT ✓</Text>
-            </View>
-          )}
-        </View>
 
         <View style={styles.cardContent}>
-          <Text style={styles.eventName} numberOfLines={2}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
             {event.name}
           </Text>
 
-          <View style={styles.eventMeta}>
-            <Text style={styles.metaText}>
-              📅 {format(eventDate, "MMM d, yyyy")}
-            </Text>
-            <Text style={styles.metaText} numberOfLines={1}>
-              📍 {event.location?.name || "TBA"}
-            </Text>
+          <View style={styles.cardMeta}>
+            <View style={styles.metaRow}>
+              <Calendar size={14} color={Colors.textMuted} />
+              <Text style={styles.metaText}>{format(eventDate, "MMMM d, yyyy")}</Text>
+            </View>
+            <View style={styles.metaRow}>
+              <MapPin size={14} color={Colors.textMuted} />
+              <Text style={styles.metaText} numberOfLines={1}>
+                {event.location?.name || "Location TBA"}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.cardFooter}>
-            {category && (
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText}>{category.name}</Text>
-              </View>
-            )}
-            {reg.raceNumber && (
-              <Text style={styles.raceNumber}>#{reg.raceNumber}</Text>
-            )}
+            <View style={styles.registrationInfo}>
+              <Users size={14} color={Colors.primary} />
+              <Text style={styles.registrationText}>
+                {event.categories?.length || 0} Categories
+              </Text>
+            </View>
+            <View style={styles.priceContainer}>
+              <Text style={styles.priceLabel}>From </Text>
+              <Text style={styles.priceValue}>
+                ₱{Math.min(...(event.categories?.map((c: any) => c.price) || [0]))}
+              </Text>
+            </View>
           </View>
+        </View>
+
+        <View style={styles.arrowContainer}>
+          <ArrowRight size={16} color={Colors.white} />
         </View>
       </Pressable>
     );
   };
 
-  const sections = [
-    ...(upcoming.length > 0
-      ? [{ type: "header" as const, title: "UPCOMING" }]
-      : []),
-    ...upcoming.map((r: any) => ({ type: "event" as const, data: r })),
-    ...(past.length > 0
-      ? [{ type: "header" as const, title: "PAST EVENTS" }]
-      : []),
-    ...past.map((r: any) => ({ type: "event" as const, data: r })),
-  ];
+  if (!isLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={[styles.header, { paddingTop: Math.max(Spacing.lg, insets.top) }]}>
-        <Text style={styles.headerTitle}>MY EVENTS</Text>
-        <Text style={styles.headerSubtitle}>
-          {registrations.length} registered event{registrations.length !== 1 ? "s" : ""}
-        </Text>
+        <Text style={styles.headerTitle}>DISCOVER</Text>
+        <Text style={styles.headerSubtitle}>Find your next race</Text>
+
+        <View style={styles.searchContainer}>
+          <Search size={18} color={Colors.textDim} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search events..."
+            placeholderTextColor={Colors.textDim}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+          />
+        </View>
       </View>
 
-      {registrations.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🏅</Text>
-          <Text style={styles.emptyTitle}>No Events Yet</Text>
-          <Text style={styles.emptyText}>
-            Register for events on raceday.com to see them here
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={sections}
-          keyExtractor={(item, i) =>
-            item.type === "header" ? `header-${item.title}` : `event-${item.data._id}`
-          }
-          renderItem={({ item }) => {
-            if (item.type === "header") {
-              return (
-                <Text style={styles.sectionHeader}>{item.title}</Text>
-              );
-            }
-            return renderEventCard({ item: item.data });
-          }}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: 110 + insets.bottom }
-          ]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Colors.primary}
-            />
-          }
-        />
-      )}
+      {/* Events List */}
+      <FlatList
+        data={results}
+        renderItem={renderEventCard}
+        keyExtractor={(item) => item._id}
+        onEndReached={() => status === "CanLoadMore" && loadMore(10)}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 110 + insets.bottom }
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Search size={48} color={Colors.surfaceLight} />
+            <Text style={styles.emptyTitle}>No Events Found</Text>
+            <Text style={styles.emptySubtitle}>Try adjusting your search</Text>
+          </View>
+        }
+      />
     </View>
   );
 }
@@ -191,9 +179,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    paddingTop: 60,
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.lg,
+    backgroundColor: Colors.background,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -205,154 +193,141 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontFamily: "Barlow_400Regular",
-    fontSize: FontSize.sm,
+    fontSize: FontSize.md,
     color: Colors.textMuted,
-    marginTop: 4,
+    marginTop: 2,
   },
-  loadingContainer: {
-    flex: 1,
+  searchContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.md,
+    marginTop: Spacing.lg,
+    height: 44,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  loadingText: {
+  searchIcon: {
+    marginRight: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
     fontFamily: "Barlow_400Regular",
     fontSize: FontSize.base,
-    color: Colors.textMuted,
+    color: Colors.text,
+    height: "100%",
   },
   listContent: {
     padding: Spacing.lg,
     gap: Spacing.lg,
   },
-  sectionHeader: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: FontSize.xs,
-    color: Colors.textDim,
-    letterSpacing: 2,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xs,
-  },
-  eventCard: {
+  card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.xl,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-  eventCardPast: {
-    opacity: 0.7,
+    padding: Spacing.md,
+    flexDirection: "row",
+    gap: Spacing.md,
   },
   cardPressed: {
-    opacity: 0.9,
     transform: [{ scale: 0.98 }],
+    borderColor: Colors.primary,
   },
-  eventImage: {
-    width: "100%",
-    height: 160,
+  cardImage: {
+    width: 100,
+    height: 100,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.surfaceLight,
   },
-  imageOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 160,
-    backgroundColor: "rgba(0,0,0,0.15)",
-  },
-  badgeContainer: {
-    position: "absolute",
-    top: Spacing.md,
-    left: Spacing.md,
-    flexDirection: "row",
-    gap: Spacing.xs,
-  },
-  statusBadge: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
-  },
-  badgePaid: {
-    backgroundColor: "rgba(34, 197, 94, 0.85)",
-  },
-  badgePending: {
-    backgroundColor: "rgba(249, 115, 22, 0.85)",
-  },
-  kitBadge: {
-    backgroundColor: "rgba(59, 130, 246, 0.85)",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
-  },
-  badgeText: {
-    fontFamily: "BarlowCondensed_700Bold",
-    fontSize: 9,
-    color: Colors.white,
-    letterSpacing: 1,
-  },
   cardContent: {
-    padding: Spacing.lg,
-    gap: Spacing.sm,
+    flex: 1,
+    justifyContent: "space-between",
   },
-  eventName: {
+  cardTitle: {
     fontFamily: "BarlowCondensed_700Bold",
-    fontSize: FontSize.xl,
+    fontSize: FontSize.lg,
     color: Colors.text,
     textTransform: "uppercase",
     letterSpacing: -0.5,
-    lineHeight: 24,
+    lineHeight: 20,
   },
-  eventMeta: {
+  cardMeta: {
     gap: 4,
   },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   metaText: {
-    fontFamily: "Barlow_500Medium",
+    fontFamily: "Barlow_400Regular",
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
+    color: Colors.textDim,
   },
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: Spacing.xs,
+    marginTop: 4,
   },
-  categoryBadge: {
-    backgroundColor: Colors.primary + "20",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.sm,
+  registrationInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  categoryText: {
+  registrationText: {
     fontFamily: "BarlowCondensed_600SemiBold",
     fontSize: FontSize.xs,
     color: Colors.primary,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
-  raceNumber: {
+  priceContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
+  priceLabel: {
+    fontFamily: "Barlow_400Regular",
+    fontSize: 10,
+    color: Colors.textDim,
+  },
+  priceValue: {
     fontFamily: "BarlowCondensed_700Bold",
-    fontSize: FontSize.lg,
-    color: Colors.primary,
+    fontSize: FontSize.md,
+    color: Colors.text,
   },
-  emptyContainer: {
-    flex: 1,
+  arrowContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    padding: Spacing["3xl"],
+    alignSelf: "center",
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: Spacing.xl,
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing["4xl"],
+    gap: Spacing.md,
   },
   emptyTitle: {
     fontFamily: "BarlowCondensed_700Bold",
-    fontSize: FontSize["2xl"],
+    fontSize: FontSize.xl,
     color: Colors.text,
     textTransform: "uppercase",
   },
-  emptyText: {
+  emptySubtitle: {
     fontFamily: "Barlow_400Regular",
     fontSize: FontSize.base,
     color: Colors.textMuted,
-    textAlign: "center",
-    marginTop: Spacing.sm,
   },
 });

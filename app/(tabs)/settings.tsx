@@ -1,15 +1,33 @@
 import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
-import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { useClerk } from "@clerk/clerk-expo";
 import { Image } from "expo-image";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+    User, ChevronRight, Bell, Shield,
+    HelpCircle, LogOut, Info, Shirt,
+    MapPin, Phone, Calendar, Heart
+} from "lucide-react-native";
+import { useState } from "react";
+import {
+    Alert, Pressable, StyleSheet, Text,
+    View, ScrollView, Switch, Platform,
+    ActivityIndicator
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInUp, FadeInRight } from "react-native-reanimated";
+import { useRouter } from "expo-router";
 
+/**
+ * Settings Screen (Stage 5)
+ * Premium profile and app settings overview.
+ */
 export default function SettingsScreen() {
-    const { signOut } = useAuth();
-    const { user: clerkUser } = useUser();
-    const { user } = useCurrentUser();
+    const { user, isLoaded } = useAuth();
+    const { signOut } = useClerk();
     const insets = useSafeAreaInsets();
+    const router = useRouter();
+
+    const [notifications, setNotifications] = useState(true);
 
     const handleSignOut = () => {
         Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -17,10 +35,18 @@ export default function SettingsScreen() {
             {
                 text: "Sign Out",
                 style: "destructive",
-                onPress: () => signOut(),
+                onPress: () => signOut()
             },
         ]);
     };
+
+    if (!isLoaded) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -28,179 +54,386 @@ export default function SettingsScreen() {
                 <Text style={styles.headerTitle}>SETTINGS</Text>
             </View>
 
-            <View style={[styles.content, { paddingBottom: 110 + insets.bottom }]}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
+            >
                 {/* Profile Card */}
-                <View style={styles.profileCard}>
-                    {clerkUser?.imageUrl ? (
-                        <Image
-                            source={{ uri: clerkUser.imageUrl }}
-                            style={styles.avatar}
-                            contentFit="cover"
-                            transition={200}
-                        />
-                    ) : (
-                        <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                            <Text style={styles.avatarText}>
-                                {user?.displayName?.[0]?.toUpperCase() || "?"}
-                            </Text>
-                        </View>
-                    )}
-
-                    <View style={styles.profileInfo}>
-                        <Text style={styles.profileName}>
-                            {user?.displayName || clerkUser?.fullName || "Runner"}
-                        </Text>
-                        <Text style={styles.profileEmail}>
-                            {user?.email || clerkUser?.emailAddresses?.[0]?.emailAddress || ""}
-                        </Text>
-                        {user?.role && (
-                            <View style={styles.roleBadge}>
-                                <Text style={styles.roleText}>{user.role.toUpperCase()}</Text>
+                <Animated.View entering={FadeInUp.delay(100)} style={styles.profileSection}>
+                    <Pressable
+                        style={styles.profileCard}
+                        onPress={() => router.push("/profile/edit" as any)}
+                    >
+                        {user?.photoURL ? (
+                            <Image
+                                source={{ uri: user.photoURL }}
+                                style={styles.avatar}
+                                contentFit="cover"
+                            />
+                        ) : (
+                            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                                <User size={32} color={Colors.primary} />
                             </View>
                         )}
+                        <View style={styles.profileInfo}>
+                            <Text style={styles.profileName}>{user?.displayName || "Runner"}</Text>
+                            <Text style={styles.profileEmail}>{user?.email}</Text>
+                            <View style={styles.completionBadge}>
+                                <View style={[styles.completionBar, { width: `${user?.profileCompletion || 0}%` }]} />
+                                <Text style={styles.completionText}>{user?.profileCompletion || 0}% Profile Complete</Text>
+                            </View>
+                        </View>
+                        <ChevronRight size={20} color={Colors.textDim} />
+                    </Pressable>
+                </Animated.View>
+
+                {/* Quick Stats */}
+                <View style={styles.statsGrid}>
+                    <StatBox label="Finished" value="12" icon={<Award size={16} color={Colors.primary} />} />
+                    <StatBox label="Total KM" value="156" icon={<Zap size={16} color={Colors.cta} />} />
+                </View>
+
+                {/* Settings Groups */}
+                <SettingsGroup title="ACCOUNT">
+                    <SettingsItem
+                        icon={<User size={20} color={Colors.textMuted} />}
+                        label="Personal Information"
+                        onPress={() => router.push("/profile/edit" as any)}
+                    />
+                    <SettingsItem
+                        icon={<Shirt size={20} color={Colors.textMuted} />}
+                        label="Apparel Sizes"
+                        value={user?.tShirtSize || "Set size"}
+                        onPress={() => router.push("/profile/edit" as any)}
+                    />
+                    <SettingsItem
+                        icon={<MapPin size={20} color={Colors.textMuted} />}
+                        label="Address"
+                        value={user?.address?.city || "Set address"}
+                        onPress={() => router.push("/profile/edit" as any)}
+                    />
+                    <SettingsItem
+                        icon={<Heart size={20} color={Colors.textMuted} />}
+                        label="Emergency Contact"
+                        onPress={() => router.push("/profile/edit" as any)}
+                    />
+                </SettingsGroup>
+
+                <SettingsGroup title="PREFERENCES">
+                    <View style={styles.settingsItem}>
+                        <View style={styles.itemLeft}>
+                            <View style={styles.iconWrapper}>
+                                <Bell size={20} color={Colors.textMuted} />
+                            </View>
+                            <Text style={styles.itemLabel}>Notifications</Text>
+                        </View>
+                        <Switch
+                            value={notifications}
+                            onValueChange={setNotifications}
+                            trackColor={{ false: Colors.surfaceLight, true: Colors.primary }}
+                            thumbColor={Colors.white}
+                        />
                     </View>
-                </View>
+                    <SettingsItem
+                        icon={<Shield size={20} color={Colors.textMuted} />}
+                        label="Privacy & Security"
+                    />
+                </SettingsGroup>
 
-                {/* Info */}
-                <View style={styles.infoSection}>
-                    <Text style={styles.infoLabel}>
-                        Registration & payments are managed on the web at raceday.com
-                    </Text>
-                </View>
+                <SettingsGroup title="SUPPORT">
+                    <SettingsItem
+                        icon={<HelpCircle size={20} color={Colors.textMuted} />}
+                        label="Help Center"
+                    />
+                    <SettingsItem
+                        icon={<Info size={20} color={Colors.textMuted} />}
+                        label="About RaceDay"
+                        value="v1.0.0"
+                    />
+                </SettingsGroup>
 
-                {/* Sign Out */}
                 <Pressable
                     style={({ pressed }) => [
-                        styles.signOutButton,
-                        pressed && styles.buttonPressed,
+                        styles.logoutButton,
+                        pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] }
                     ]}
                     onPress={handleSignOut}
                 >
-                    <Text style={styles.signOutText}>SIGN OUT</Text>
+                    <LogOut size={20} color={Colors.danger} />
+                    <Text style={styles.logoutText}>SIGN OUT</Text>
                 </Pressable>
 
-                {/* App Version */}
-                <Text style={styles.versionText}>RaceDay Mobile v1.0.0</Text>
+                <Text style={styles.copyright}>© 2026 RACEDAY. ALL RIGHTS RESERVED.</Text>
+            </ScrollView>
+        </View>
+    );
+}
+
+function StatBox({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+    return (
+        <View style={styles.statBox}>
+            <View style={styles.statHeader}>
+                {icon}
+                <Text style={styles.statLabel}>{label}</Text>
+            </View>
+            <Text style={styles.statValue}>{value}</Text>
+        </View>
+    );
+}
+
+function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <View style={styles.group}>
+            <Text style={styles.groupTitle}>{title}</Text>
+            <View style={styles.groupContent}>
+                {children}
             </View>
         </View>
     );
 }
+
+function SettingsItem({
+    icon,
+    label,
+    value,
+    onPress
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value?: string;
+    onPress?: () => void;
+}) {
+    return (
+        <Pressable
+            style={({ pressed }) => [
+                styles.settingsItem,
+                pressed && styles.itemPressed
+            ]}
+            onPress={onPress}
+        >
+            <View style={styles.itemLeft}>
+                <View style={styles.iconWrapper}>
+                    {icon}
+                </View>
+                <Text style={styles.itemLabel}>{label}</Text>
+            </View>
+            <View style={styles.itemRight}>
+                {value && <Text style={styles.itemValue}>{value}</Text>}
+                <ChevronRight size={16} color={Colors.textDim} />
+            </View>
+        </Pressable>
+    );
+}
+
+const Award = ({ size, color }: { size: number; color: string }) => <Info size={size} color={color} />;
+const Zap = ({ size, color }: { size: number; color: string }) => <Info size={size} color={color} />;
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
     },
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: Colors.background,
+        alignItems: "center",
+        justifyContent: "center",
+    },
     header: {
-        paddingTop: 60,
         paddingHorizontal: Spacing.xl,
         paddingBottom: Spacing.lg,
+        backgroundColor: Colors.background,
         borderBottomWidth: 1,
         borderBottomColor: Colors.border,
     },
     headerTitle: {
         fontFamily: "BarlowCondensed_700Bold",
         fontSize: FontSize["3xl"],
-        color: Colors.text,
+        color: Colors.white,
         letterSpacing: -0.5,
     },
-    content: {
-        flex: 1,
+    profileSection: {
         padding: Spacing.xl,
-        gap: Spacing.xl,
     },
     profileCard: {
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: Colors.surface,
         padding: Spacing.xl,
-        borderRadius: Radius.xl,
+        borderRadius: Radius["2xl"],
         borderWidth: 1,
         borderColor: Colors.border,
         gap: Spacing.lg,
     },
     avatar: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        borderWidth: 2,
+        borderColor: Colors.primary,
     },
     avatarPlaceholder: {
-        backgroundColor: Colors.primary + "30",
+        backgroundColor: Colors.surfaceLight,
         alignItems: "center",
         justifyContent: "center",
     },
-    avatarText: {
-        fontFamily: "BarlowCondensed_700Bold",
-        fontSize: FontSize.xl,
-        color: Colors.primary,
-    },
     profileInfo: {
         flex: 1,
-        gap: 4,
+        gap: 2,
     },
     profileName: {
         fontFamily: "BarlowCondensed_700Bold",
         fontSize: FontSize.xl,
-        color: Colors.text,
+        color: Colors.white,
         textTransform: "uppercase",
-        letterSpacing: -0.3,
     },
     profileEmail: {
         fontFamily: "Barlow_400Regular",
         fontSize: FontSize.sm,
-        color: Colors.textMuted,
+        color: Colors.textDim,
     },
-    roleBadge: {
-        alignSelf: "flex-start",
-        backgroundColor: Colors.primary + "20",
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: 2,
-        borderRadius: Radius.sm,
-        marginTop: 4,
-    },
-    roleText: {
-        fontFamily: "BarlowCondensed_600SemiBold",
-        fontSize: 9,
-        color: Colors.primary,
-        letterSpacing: 1,
-    },
-    infoSection: {
-        backgroundColor: Colors.surface,
-        padding: Spacing.lg,
-        borderRadius: Radius.lg,
+    completionBadge: {
+        height: 16,
+        backgroundColor: Colors.background,
+        borderRadius: 8,
+        marginTop: 8,
+        overflow: "hidden",
+        justifyContent: "center",
+        paddingHorizontal: 8,
         borderWidth: 1,
         borderColor: Colors.border,
     },
-    infoLabel: {
+    completionBar: {
+        position: "absolute",
+        left: 0,
+        top: 0,
+        bottom: 0,
+        backgroundColor: Colors.primary + "30",
+    },
+    completionText: {
+        fontFamily: "BarlowCondensed_600SemiBold",
+        fontSize: 8,
+        color: Colors.primary,
+        letterSpacing: 0.5,
+        textTransform: "uppercase",
+    },
+    statsGrid: {
+        flexDirection: "row",
+        paddingHorizontal: Spacing.xl,
+        gap: Spacing.lg,
+        marginBottom: Spacing.xl,
+    },
+    statBox: {
+        flex: 1,
+        backgroundColor: Colors.surface,
+        padding: Spacing.lg,
+        borderRadius: Radius.xl,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        gap: 4,
+    },
+    statHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    statLabel: {
+        fontFamily: "BarlowCondensed_600SemiBold",
+        fontSize: 10,
+        color: Colors.textDim,
+        textTransform: "uppercase",
+        letterSpacing: 1,
+    },
+    statValue: {
+        fontFamily: "BarlowCondensed_700Bold",
+        fontSize: FontSize.xl,
+        color: Colors.white,
+    },
+    group: {
+        marginBottom: Spacing.xl,
+    },
+    groupTitle: {
+        fontFamily: "BarlowCondensed_700Bold",
+        fontSize: 11,
+        color: Colors.textDim,
+        letterSpacing: 2,
+        paddingHorizontal: Spacing["2xl"],
+        marginBottom: Spacing.md,
+        textTransform: "uppercase",
+    },
+    groupContent: {
+        backgroundColor: Colors.surface,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: Colors.border,
+    },
+    settingsItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: Spacing.lg,
+        paddingHorizontal: Spacing.xl,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+    },
+    itemPressed: {
+        backgroundColor: Colors.surfaceLight + "30",
+    },
+    itemLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.lg,
+    },
+    iconWrapper: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: Colors.background,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    itemLabel: {
+        fontFamily: "BarlowCondensed_600SemiBold",
+        fontSize: FontSize.base,
+        color: Colors.white,
+    },
+    itemRight: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    itemValue: {
         fontFamily: "Barlow_400Regular",
         fontSize: FontSize.sm,
-        color: Colors.textMuted,
-        textAlign: "center",
-        lineHeight: 20,
+        color: Colors.textDim,
     },
-    signOutButton: {
-        backgroundColor: Colors.danger + "15",
-        borderWidth: 1,
-        borderColor: Colors.danger + "30",
+    logoutButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        marginTop: Spacing.xl,
+        marginHorizontal: Spacing.xl,
         padding: Spacing.lg,
         borderRadius: Radius.lg,
-        alignItems: "center",
+        backgroundColor: Colors.danger + "10",
+        borderWidth: 1,
+        borderColor: Colors.danger + "20",
     },
-    buttonPressed: {
-        opacity: 0.8,
-        transform: [{ scale: 0.98 }],
-    },
-    signOutText: {
+    logoutText: {
         fontFamily: "BarlowCondensed_700Bold",
         fontSize: FontSize.base,
         color: Colors.danger,
         letterSpacing: 1,
     },
-    versionText: {
-        fontFamily: "Barlow_400Regular",
-        fontSize: FontSize.xs,
+    copyright: {
+        fontFamily: "BarlowCondensed_500Medium",
+        fontSize: 9,
         color: Colors.textDim,
         textAlign: "center",
-        marginTop: "auto",
+        marginTop: Spacing["2xl"],
+        letterSpacing: 1,
     },
 });

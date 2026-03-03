@@ -14,7 +14,17 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.raceday.mobile"
+      "bundleIdentifier": "com.raceday.mobile",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ],
+        "NSLocationWhenInUseUsageDescription": "RaceDay needs your location to show your position on the race map.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "RaceDay needs your location to share your race progress with friends and family.",
+        "NSLocationAlwaysUsageDescription": "RaceDay needs background location to track your race progress even when the app is in the background."
+      }
     },
     "android": {
       "package": "com.raceday.mobile",
@@ -23,7 +33,15 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.WRITE_SETTINGS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -58,6 +76,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5ddaf611-2614-40ed-a2b9-527388ed3cc1"
+      },
+      "router": {
+        "origin": false
+      }
+    },
+    "owner": "chinofyoung"
   }
 }
