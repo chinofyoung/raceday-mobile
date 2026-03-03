@@ -1,7 +1,7 @@
-import { Colors } from "@/constants/theme";
+import { Colors } from "@/constants/theme"; // 2
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { Tabs, useSegments } from "expo-router";
+import { Tabs } from "expo-router";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 function TabIcon({
@@ -32,11 +32,6 @@ function TabIcon({
 }
 
 export default function TabLayout() {
-  const segments = useSegments();
-
-  // Guard against rendering tabs before the navigation state is fully settled
-  if (!segments) return null;
-
   return (
     <Tabs
       screenOptions={{
@@ -47,7 +42,7 @@ export default function TabLayout() {
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
           <BlurView
-            intensity={80}
+            intensity={95}
             tint="dark"
             style={StyleSheet.absoluteFill}
           />
@@ -87,22 +82,11 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 32 : 24,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(31, 41, 55, 0.7)',
-    borderTopWidth: 0,
-    elevation: 8,
-    height: 72,
-    borderRadius: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    paddingTop: 16,
-    overflow: 'hidden',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(25, 25, 43, 0.98)',
+    elevation: 0,
+    height: Platform.OS === 'ios' ? 88 : 72,
+    paddingTop: 24,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
   },
   tabIconContainer: {
     alignItems: "center",

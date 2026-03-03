@@ -34,11 +34,16 @@ export async function registerForPushNotificationsAsync() {
 
         if (!projectId) {
             console.warn("No Project ID found for push notifications. Make sure you have configured EAS.");
+            return undefined;
         }
 
-        token = (await Notifications.getExpoPushTokenAsync({
-            projectId: projectId,
-        })).data;
+        try {
+            token = (await Notifications.getExpoPushTokenAsync({
+                projectId: projectId,
+            })).data;
+        } catch (error) {
+            console.error("Failed to get push token:", error);
+        }
     } else {
         console.log('Must use physical device for Push Notifications');
     }

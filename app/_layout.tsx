@@ -1,3 +1,4 @@
+// 1
 import { api } from "@/convex/_generated/api";
 import { registerForPushNotificationsAsync } from "@/lib/notifications";
 import { tokenCache } from "@/lib/tokenCache";
@@ -20,7 +21,7 @@ import { ConvexReactClient, useMutation } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
-import { Slot, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -35,7 +36,7 @@ const convex = new ConvexReactClient(
   process.env.EXPO_PUBLIC_CONVEX_URL!
 );
 
-function AuthGate() {
+function AuthCheck() {
   const { user, isLoaded: isUserLoaded } = useCurrentUser();
   const { isSignedIn, isLoaded: isAuthLoaded } = useAuth();
   const segments = useSegments();
@@ -71,6 +72,7 @@ function AuthGate() {
     if (!isAuthLoaded) return;
 
     const currentGroup = segments[0];
+    if (!currentGroup) return;
 
     if (!isSignedIn && currentGroup !== "(auth)") {
       router.replace("/(auth)/login");
@@ -79,9 +81,7 @@ function AuthGate() {
     }
   }, [isSignedIn, isAuthLoaded, segments]);
 
-  if (!isAuthLoaded) return null;
-
-  return <Slot />;
+  return null;
 }
 
 export default function RootLayout() {
@@ -116,7 +116,14 @@ export default function RootLayout() {
     >
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <ClerkLoaded>
-          <AuthGate />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="events" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <AuthCheck />
           <StatusBar style="light" />
         </ClerkLoaded>
       </ConvexProviderWithClerk>

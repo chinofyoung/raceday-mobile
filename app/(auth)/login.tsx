@@ -1,5 +1,7 @@
 import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
 import { useOAuth } from "@clerk/clerk-expo";
+import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback } from "react";
@@ -29,17 +31,20 @@ export default function LoginScreen() {
         <View style={styles.container}>
             {/* Hero */}
             <View style={styles.heroSection}>
-                <View style={styles.logoContainer}>
-                    <Text style={styles.logoText}>🏃</Text>
-                </View>
-                <Text style={styles.title}>RACEDAY</Text>
+                <Image
+                    source={require("../../assets/images/logo.png")}
+                    style={styles.logoImage}
+                    contentFit="contain"
+                />
                 <Text style={styles.subtitle}>Your Race Companion</Text>
             </View>
 
             {/* Features */}
             <View style={styles.featuresSection}>
                 <View style={styles.featureRow}>
-                    <Text style={styles.featureIcon}>📍</Text>
+                    <View style={styles.featureIconContainer}>
+                        <Feather name="map-pin" size={24} color={Colors.primary} />
+                    </View>
                     <View style={styles.featureText}>
                         <Text style={styles.featureTitle}>Live Tracking</Text>
                         <Text style={styles.featureDesc}>
@@ -48,7 +53,9 @@ export default function LoginScreen() {
                     </View>
                 </View>
                 <View style={styles.featureRow}>
-                    <Text style={styles.featureIcon}>🎫</Text>
+                    <View style={styles.featureIconContainer}>
+                        <Feather name="smartphone" size={24} color={Colors.primary} />
+                    </View>
                     <View style={styles.featureText}>
                         <Text style={styles.featureTitle}>Digital Race Pass</Text>
                         <Text style={styles.featureDesc}>
@@ -57,7 +64,9 @@ export default function LoginScreen() {
                     </View>
                 </View>
                 <View style={styles.featureRow}>
-                    <Text style={styles.featureIcon}>🏆</Text>
+                    <View style={styles.featureIconContainer}>
+                        <Feather name="award" size={24} color={Colors.primary} />
+                    </View>
                     <View style={styles.featureText}>
                         <Text style={styles.featureTitle}>My Events</Text>
                         <Text style={styles.featureDesc}>
@@ -99,17 +108,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: Spacing["4xl"],
     },
-    logoContainer: {
-        width: 80,
+    logoImage: {
+        width: 270,
         height: 80,
-        borderRadius: Radius.xl,
-        backgroundColor: Colors.primary + "20",
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: Spacing.lg,
-    },
-    logoText: {
-        fontSize: 40,
     },
     title: {
         fontFamily: "BarlowCondensed_700Bold",
@@ -133,15 +134,13 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: Spacing.lg,
     },
-    featureIcon: {
-        fontSize: 28,
+    featureIconContainer: {
         width: 48,
         height: 48,
-        lineHeight: 48,
-        textAlign: "center",
+        alignItems: "center",
+        justifyContent: "center",
         backgroundColor: Colors.surface,
         borderRadius: Radius.md,
-        overflow: "hidden",
     },
     featureText: {
         flex: 1,
