@@ -8,7 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 let MapView: any, Marker: any, Polyline: any, PROVIDER_DEFAULT: any;
@@ -27,6 +27,7 @@ export default function LiveScreen() {
     const insets = useSafeAreaInsets();
 
     const [selectedEventId, setSelectedEventId] = useState<Id<"events"> | null>(null);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [gpxPoints, setGpxPoints] = useState<LatLng[]>([]);
     const [isTracking, setIsTracking] = useState(false);
     const [isLoadingGpx, setIsLoadingGpx] = useState(false);
@@ -41,32 +42,35 @@ export default function LiveScreen() {
     const registeredEvents = useMemo(() => {
         if (!registrations) return [];
         return registrations
-            .filter(r => r.event && r.status === "paid")
+            .filter(r => r.event && r.status === "paid" && r.event.isLiveTrackingEnabled)
             .map(r => ({
                 ...r.event,
                 registrationId: r._id,
-                categoryId: r.categoryId
+                userCategoryId: r.categoryId // The category the user registered for
             }));
     }, [registrations]);
 
     const activeEvent = useMemo(() => {
         if (selectedEventId) return registeredEvents.find(e => e._id === selectedEventId);
-        if (registeredEvents.length === 0) return null;
 
-        // Default to the event closest to today (or today's event)
-        const now = Date.now();
-        return registeredEvents.sort((a, b) => {
-            const dateA = a.date ?? 0;
-            const dateB = b.date ?? 0;
-            return Math.abs(dateA - now) - Math.abs(dateB - now);
-        })[0];
+        // If only one event is available, select it automatically
+        if (registeredEvents.length === 1) return registeredEvents[0];
+
+        return null; // Don't default if there are multiple, let user choose
     }, [registeredEvents, selectedEventId]);
+
+    // Update selectedCategoryId when activeEvent changes
+    useEffect(() => {
+        if (activeEvent && !selectedCategoryId) {
+            setSelectedCategoryId(activeEvent.userCategoryId || activeEvent.categories?.[0]?.id || null);
+        }
+    }, [activeEvent, selectedCategoryId]);
 
     // 3. Fetch and parse GPX for the active event/category
     useEffect(() => {
-        if (!activeEvent) return;
+        if (!activeEvent || !selectedCategoryId) return;
 
-        const category = activeEvent.categories?.find((c: any) => c.id === activeEvent.categoryId);
+        const category = activeEvent.categories?.find((c: any) => c.id === selectedCategoryId);
         const gpxUrl = category?.routeMap?.gpxFileUrl;
 
         if (gpxUrl) {
@@ -81,7 +85,7 @@ export default function LiveScreen() {
                     if (points.length > 0) {
                         setTimeout(() => {
                             mapRef.current?.fitToCoordinates(points, {
-                                edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                                edgePadding: { top: 50, right: 50, bottom: 150, left: 50 },
                                 animated: true,
                             });
                         }, 500);
@@ -92,7 +96,12 @@ export default function LiveScreen() {
         } else {
             setGpxPoints([]);
         }
-    }, [activeEvent]);
+    }, [activeEvent, selectedCategoryId]);
+
+    const activeCategory = useMemo(() => {
+        if (!activeEvent || !selectedCategoryId) return null;
+        return activeEvent.categories?.find((c: any) => c.id === selectedCategoryId);
+    }, [activeEvent, selectedCategoryId]);
 
     // 4. Initial check for tracking status
     useEffect(() => {
@@ -137,15 +146,45 @@ export default function LiveScreen() {
     if (registeredEvents.length === 0) {
         return (
             <View style={styles.container}>
-                <View style={styles.header}>
+                <View style={[styles.header, { paddingTop: Math.max(Spacing.xl, insets.top) }]}>
                     <Text style={styles.headerTitle}>LIVE TRACK</Text>
                 </View>
                 <View style={styles.emptyContainer}>
                     <Text style={styles.emptyIcon}>📍</Text>
                     <Text style={styles.emptyTitle}>No Active Races</Text>
                     <Text style={styles.emptyText}>
-                        You need to be registered for an event to use live tracking.
+                        You need to be registered for an event with Live Tracking enabled to use this feature.
                     </Text>
+                </View>
+            </View>
+        );
+    }
+
+    if (!activeEvent) {
+        return (
+            <View style={styles.container}>
+                <View style={[styles.header, { paddingTop: Math.max(Spacing.xl, insets.top) }]}>
+                    <Text style={styles.headerTitle}>LIVE TRACK</Text>
+                </View>
+                <View style={styles.eventListContainer}>
+                    <Text style={styles.sectionTitle}>SELECT AN EVENT</Text>
+                    {registeredEvents.map(event => (
+                        <Pressable
+                            key={event._id}
+                            style={styles.eventItem}
+                            onPress={() => setSelectedEventId(event._id as Id<"events">)}
+                        >
+                            <View style={styles.eventItemInfo}>
+                                <Text style={styles.eventName}>{event.name}</Text>
+                                <Text style={styles.eventDate}>
+                                    {event.date ? new Date(event.date).toLocaleDateString(undefined, {
+                                        month: 'long', day: 'numeric', year: 'numeric'
+                                    }) : 'Date TBD'}
+                                </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
+                        </Pressable>
+                    ))}
                 </View>
             </View>
         );
@@ -153,9 +192,22 @@ export default function LiveScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: Math.max(Spacing.lg, insets.top) }]}>
-                <View>
-                    <Text style={styles.headerTitle}>LIVE TRACK</Text>
+            <View style={[styles.header, { paddingTop: Math.max(Spacing.xl, insets.top) }]}>
+                <View style={{ flex: 1 }}>
+                    <View style={styles.headerRow}>
+                        {registeredEvents.length > 1 && (
+                            <Pressable
+                                onPress={() => {
+                                    setSelectedEventId(null);
+                                    setSelectedCategoryId(null);
+                                }}
+                                style={styles.backButton}
+                            >
+                                <Ionicons name="chevron-back" size={24} color={Colors.text} />
+                            </Pressable>
+                        )}
+                        <Text style={styles.headerTitle} numberOfLines={1}>LIVE TRACK</Text>
+                    </View>
                     <Text style={styles.headerSubtitle} numberOfLines={1}>
                         {activeEvent?.name}
                     </Text>
@@ -171,6 +223,36 @@ export default function LiveScreen() {
                     </Text>
                 </Pressable>
             </View>
+
+            {/* Category Selector */}
+            {activeEvent.categories && activeEvent.categories.length > 1 && (
+                <View style={styles.categorySelector}>
+                    <Text style={styles.selectorLabel}>CATEGORY:</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.categoryList}
+                    >
+                        {activeEvent.categories.map((cat: any) => (
+                            <Pressable
+                                key={cat.id}
+                                style={[
+                                    styles.categoryBadge,
+                                    selectedCategoryId === cat.id && styles.categoryBadgeActive
+                                ]}
+                                onPress={() => setSelectedCategoryId(cat.id)}
+                            >
+                                <Text style={[
+                                    styles.categoryBadgeText,
+                                    selectedCategoryId === cat.id && styles.categoryBadgeActiveText
+                                ]}>
+                                    {cat.name}
+                                </Text>
+                            </Pressable>
+                        ))}
+                    </ScrollView>
+                </View>
+            )}
 
             <View style={styles.mapContainer}>
                 {Platform.OS === 'web' ? (
@@ -203,6 +285,41 @@ export default function LiveScreen() {
                             />
                         )}
 
+                        {/* Aid Stations */}
+                        {activeCategory?.stations?.map((station: any) => (
+                            <Marker
+                                key={station.id}
+                                coordinate={{
+                                    latitude: station.coordinates.lat,
+                                    longitude: station.coordinates.lng
+                                }}
+                                title={station.label}
+                                anchor={{ x: 0.5, y: 1 }}
+                            >
+                                <View style={styles.stationMarker}>
+                                    <View style={[
+                                        styles.stationIcon,
+                                        station.type === 'water' ? styles.stationIcon_water :
+                                            station.type === 'first_aid' ? styles.stationIcon_first_aid :
+                                                styles.stationIcon_aid
+                                    ]}>
+                                        <Ionicons
+                                            name={
+                                                station.type === 'water' ? 'water' :
+                                                    station.type === 'first_aid' ? 'medical' :
+                                                        'fast-food'
+                                            }
+                                            size={12}
+                                            color="white"
+                                        />
+                                    </View>
+                                    <View style={styles.stationLabelContainer}>
+                                        <Text style={styles.stationLabel}>{station.label}</Text>
+                                    </View>
+                                </View>
+                            </Marker>
+                        ))}
+
                         {/* Live Tracker Markers */}
                         {liveTrackers.map((tracker: any) => (
                             <Marker
@@ -210,6 +327,7 @@ export default function LiveScreen() {
                                 coordinate={{ latitude: tracker.lat, longitude: tracker.lng }}
                                 title={tracker.displayName}
                                 flat={true}
+                                anchor={{ x: 0.5, y: 0.5 }}
                             >
                                 <View style={[
                                     styles.markerContainer,
@@ -336,6 +454,127 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(31, 41, 55, 0.3)",
         alignItems: "center",
         justifyContent: "center",
+    },
+    headerRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.sm,
+    },
+    backButton: {
+        marginLeft: -Spacing.sm,
+        padding: Spacing.xs,
+    },
+    eventListContainer: {
+        flex: 1,
+        padding: Spacing.xl,
+    },
+    sectionTitle: {
+        fontFamily: "BarlowCondensed_700Bold",
+        fontSize: FontSize.lg,
+        color: Colors.textMuted,
+        letterSpacing: 1,
+        marginBottom: Spacing.lg,
+    },
+    eventItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: Colors.surface,
+        padding: Spacing.lg,
+        borderRadius: Radius.lg,
+        marginBottom: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    eventItemInfo: {
+        flex: 1,
+    },
+    eventName: {
+        fontFamily: "BarlowCondensed_700Bold",
+        fontSize: FontSize.xl,
+        color: Colors.text,
+    },
+    eventDate: {
+        fontFamily: "Barlow_400Regular",
+        fontSize: FontSize.sm,
+        color: Colors.textMuted,
+        marginTop: 2,
+    },
+    categorySelector: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: Spacing.xl,
+        paddingVertical: Spacing.md,
+        backgroundColor: Colors.background,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+        gap: Spacing.md,
+    },
+    selectorLabel: {
+        fontFamily: "BarlowCondensed_700Bold",
+        fontSize: FontSize.xs,
+        color: Colors.textMuted,
+    },
+    categoryList: {
+        flex: 1,
+        flexDirection: "row",
+        gap: Spacing.xs,
+    },
+    categoryBadge: {
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.xs,
+        borderRadius: Radius.full,
+        backgroundColor: Colors.surface,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    categoryBadgeActive: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+    },
+    categoryBadgeText: {
+        fontFamily: "BarlowCondensed_700Bold",
+        fontSize: FontSize.xs,
+        color: Colors.textMuted,
+    },
+    categoryBadgeActiveText: {
+        color: "white",
+    },
+    stationMarker: {
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    stationIcon: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: Colors.primary,
+        borderWidth: 2,
+        borderColor: "white",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 2,
+    },
+    stationIcon_water: {
+        backgroundColor: "#3b82f6",
+    },
+    stationIcon_aid: {
+        backgroundColor: "#f59e0b",
+    },
+    stationIcon_first_aid: {
+        backgroundColor: "#ef4444",
+    },
+    stationLabelContainer: {
+        backgroundColor: "rgba(0,0,0,0.7)",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        marginTop: 2,
+    },
+    stationLabel: {
+        color: "white",
+        fontSize: 10,
+        fontFamily: "Barlow_700Bold",
     },
     markerContainer: {
         width: 14,
