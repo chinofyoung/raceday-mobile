@@ -2,16 +2,19 @@ import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
 import { format } from "date-fns";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function EventDetailScreen() {
     const { id, regId } = useLocalSearchParams<{ id: string; regId: string }>();
     const { user } = useCurrentUser();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
 
     const registrations = useQuery(
         api.registrations.getByUserId,
@@ -49,7 +52,7 @@ export default function EventDetailScreen() {
 
                     {/* Back Button */}
                     <Pressable style={styles.backButton} onPress={() => router.back()}>
-                        <Text style={styles.backText}>← Back</Text>
+                        <Ionicons name="chevron-back" size={24} color={Colors.white} />
                     </Pressable>
 
                     {/* Hero Info */}
@@ -64,30 +67,50 @@ export default function EventDetailScreen() {
                 <View style={styles.content}>
                     {/* Quick Info Grid */}
                     <View style={styles.infoGrid}>
-                        <View style={styles.infoCard}>
-                            <Text style={styles.infoLabel}>LOCATION</Text>
-                            <Text style={styles.infoValue}>{event.location?.name || "TBA"}</Text>
+                        <View style={[styles.infoCard, styles.fullWidthCard]}>
+                            <View style={styles.infoIconContainer}>
+                                <Ionicons name="location" size={16} color={Colors.primary} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.infoLabel}>LOCATION</Text>
+                                <Text style={styles.infoValue} numberOfLines={2}>{event.location?.name || "TBA"}</Text>
+                            </View>
+                        </View>
+                        <View style={[styles.infoCard, styles.fullWidthCard]}>
+                            <View style={styles.infoIconContainer}>
+                                <Ionicons name="medal" size={16} color={Colors.primary} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.infoLabel}>CATEGORY</Text>
+                                <Text style={styles.infoValue} numberOfLines={2}>{category?.name || "—"}</Text>
+                            </View>
                         </View>
                         <View style={styles.infoCard}>
-                            <Text style={styles.infoLabel}>CATEGORY</Text>
-                            <Text style={styles.infoValue}>{category?.name || "—"}</Text>
+                            <View style={styles.infoIconContainer}>
+                                <Ionicons name="file-tray-full" size={16} color={Colors.primary} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.infoLabel}>RACE #</Text>
+                                <Text style={[styles.infoValue, styles.primaryText]}>
+                                    {reg.raceNumber || "TBA"}
+                                </Text>
+                            </View>
                         </View>
                         <View style={styles.infoCard}>
-                            <Text style={styles.infoLabel}>RACE #</Text>
-                            <Text style={[styles.infoValue, styles.primaryText]}>
-                                {reg.raceNumber || "TBA"}
-                            </Text>
-                        </View>
-                        <View style={styles.infoCard}>
-                            <Text style={styles.infoLabel}>STATUS</Text>
-                            <Text
-                                style={[
-                                    styles.infoValue,
-                                    reg.status === "paid" ? styles.ctaText : styles.primaryText,
-                                ]}
-                            >
-                                {reg.status === "paid" ? "CONFIRMED" : reg.status?.toUpperCase()}
-                            </Text>
+                            <View style={styles.infoIconContainer}>
+                                <Ionicons name="checkmark-circle" size={16} color={reg.status === "paid" ? Colors.cta : Colors.primary} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.infoLabel}>STATUS</Text>
+                                <Text
+                                    style={[
+                                        styles.infoValue,
+                                        reg.status === "paid" ? styles.ctaText : styles.primaryText,
+                                    ]}
+                                >
+                                    {reg.status === "paid" ? "CONFIRMED" : reg.status?.toUpperCase()}
+                                </Text>
+                            </View>
                         </View>
                     </View>
 
@@ -102,13 +125,16 @@ export default function EventDetailScreen() {
                                 router.push(`/events/${id}/qr?regId=${reg._id}`)
                             }
                         >
-                            <Text style={styles.qrIcon}>🎫</Text>
-                            <View>
+                            <View style={styles.qrIconBadge}>
+                                <Ionicons name="qr-code" size={24} color={Colors.cta} />
+                            </View>
+                            <View style={{ flex: 1 }}>
                                 <Text style={styles.qrButtonTitle}>VIEW RACE PASS</Text>
                                 <Text style={styles.qrButtonSubtitle}>
                                     Show QR code at the kit claim booth
                                 </Text>
                             </View>
+                            <Ionicons name="chevron-forward" size={20} color={Colors.cta} />
                         </Pressable>
                     )}
 
@@ -116,20 +142,25 @@ export default function EventDetailScreen() {
                     {event.timeline && event.timeline.length > 0 && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>RACE DAY TIMELINE</Text>
-                            {event.timeline
-                                .sort((a: any, b: any) => a.order - b.order)
-                                .map((item: any, i: number) => (
-                                    <View key={item.id || i} style={styles.timelineItem}>
-                                        <View style={styles.timelineDot} />
-                                        <View style={styles.timelineContent}>
-                                            <Text style={styles.timelineTime}>{item.time}</Text>
-                                            <Text style={styles.timelineActivity}>{item.activity}</Text>
-                                            {item.description && (
-                                                <Text style={styles.timelineDesc}>{item.description}</Text>
-                                            )}
+                            <View style={styles.cardContainer}>
+                                {event.timeline
+                                    .sort((a: any, b: any) => a.order - b.order)
+                                    .map((item: any, i: number) => (
+                                        <View key={item.id || i} style={styles.timelineItem}>
+                                            <View style={styles.timelineIndicators}>
+                                                <View style={styles.timelineDot} />
+                                                {i < event.timeline.length - 1 && <View style={styles.timelineLine} />}
+                                            </View>
+                                            <View style={styles.timelineContent}>
+                                                <Text style={styles.timelineTime}>{item.time}</Text>
+                                                <Text style={styles.timelineActivity}>{item.activity}</Text>
+                                                {item.description && (
+                                                    <Text style={styles.timelineDesc}>{item.description}</Text>
+                                                )}
+                                            </View>
                                         </View>
-                                    </View>
-                                ))}
+                                    ))}
+                            </View>
                         </View>
                     )}
 
@@ -137,34 +168,38 @@ export default function EventDetailScreen() {
                     {category && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>CATEGORY DETAILS</Text>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Distance</Text>
-                                <Text style={styles.detailValue}>
-                                    {category.distance} {category.distanceUnit}
-                                </Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Assembly</Text>
-                                <Text style={styles.detailValue}>{category.assemblyTime}</Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Gun Start</Text>
-                                <Text style={styles.detailValue}>{category.gunStartTime}</Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Cut-off</Text>
-                                <Text style={styles.detailValue}>{category.cutOffTime}</Text>
-                            </View>
-                            {category.inclusions && category.inclusions.length > 0 && (
-                                <View style={styles.inclusionsContainer}>
-                                    <Text style={styles.detailLabel}>Inclusions</Text>
-                                    {category.inclusions.map((item: string, i: number) => (
-                                        <Text key={i} style={styles.inclusionItem}>
-                                            • {item}
-                                        </Text>
-                                    ))}
+                            <View style={styles.cardContainer}>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Distance</Text>
+                                    <Text style={styles.detailValue}>
+                                        {category.distance} {category.distanceUnit}
+                                    </Text>
                                 </View>
-                            )}
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Assembly</Text>
+                                    <Text style={styles.detailValue}>{category.assemblyTime}</Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Gun Start</Text>
+                                    <Text style={styles.detailValue}>{category.gunStartTime}</Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Cut-off</Text>
+                                    <Text style={styles.detailValue}>{category.cutOffTime}</Text>
+                                </View>
+                                {category.inclusions && category.inclusions.length > 0 && (
+                                    <View style={styles.inclusionsContainer}>
+                                        <Text style={styles.detailLabel}>Inclusions</Text>
+                                        <View style={styles.inclusionsList}>
+                                            {category.inclusions.map((item: string, i: number) => (
+                                                <View key={i} style={styles.inclusionBadge}>
+                                                    <Text style={styles.inclusionText}>{item}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
                         </View>
                     )}
 
@@ -177,8 +212,9 @@ export default function EventDetailScreen() {
                             ]}
                             onPress={() => router.push("/(tabs)/live")}
                         >
-                            <Text style={styles.liveIcon}>📍</Text>
-                            <Text style={styles.liveButtonText}>GO TO LIVE TRACK</Text>
+                            <Ionicons name="navigate" size={20} color={Colors.white} />
+                            <Text style={styles.liveButtonText}>LAUNCH LIVE TRACKER</Text>
+                            <Ionicons name="arrow-forward" size={16} color={Colors.white} />
                         </Pressable>
                     )}
                 </View>
@@ -213,23 +249,23 @@ const styles = StyleSheet.create({
     },
     heroOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0,0,0,0.4)",
+        backgroundColor: "rgba(0,0,0,0.5)",
     },
     backButton: {
         position: "absolute",
         top: 56,
         left: Spacing.lg,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.sm,
-        borderRadius: Radius.full,
+        backgroundColor: "rgba(0,0,0,0.3)",
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.2)",
     },
     backText: {
-        fontFamily: "BarlowCondensed_600SemiBold",
-        fontSize: FontSize.sm,
-        color: Colors.white,
-        textTransform: "uppercase",
-        letterSpacing: 0.5,
+        display: "none",
     },
     heroInfo: {
         position: "absolute",
@@ -239,48 +275,63 @@ const styles = StyleSheet.create({
     },
     heroTitle: {
         fontFamily: "BarlowCondensed_700Bold",
-        fontSize: FontSize["3xl"],
+        fontSize: FontSize["4xl"],
         color: Colors.white,
         textTransform: "uppercase",
-        letterSpacing: -0.5,
-        lineHeight: 34,
+        letterSpacing: -0.8,
+        lineHeight: 38,
     },
     heroDate: {
         fontFamily: "Barlow_500Medium",
-        fontSize: FontSize.base,
-        color: "rgba(255,255,255,0.8)",
-        marginTop: 6,
+        fontSize: FontSize.md,
+        color: "rgba(255,255,255,0.9)",
+        marginTop: 4,
     },
     content: {
         padding: Spacing.xl,
-        gap: Spacing.xl,
+        gap: Spacing["2xl"],
+        paddingBottom: 40,
     },
     infoGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
-        gap: Spacing.sm,
+        gap: Spacing.md,
     },
     infoCard: {
-        flex: 1,
-        minWidth: "45%",
+        width: "47.5%",
         backgroundColor: Colors.surface,
         padding: Spacing.lg,
         borderRadius: Radius.lg,
         borderWidth: 1,
         borderColor: Colors.border,
-        gap: 4,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.md,
+    },
+    fullWidthCard: {
+        width: "100%",
+    },
+    infoIconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        backgroundColor: Colors.background,
+        alignItems: "center",
+        justifyContent: "center",
     },
     infoLabel: {
         fontFamily: "BarlowCondensed_600SemiBold",
-        fontSize: 9,
-        color: Colors.textDim,
-        letterSpacing: 1.5,
+        fontSize: 11,
+        color: Colors.textMuted,
+        letterSpacing: 1.2,
+        textTransform: "uppercase",
     },
     infoValue: {
         fontFamily: "BarlowCondensed_700Bold",
-        fontSize: FontSize.md,
+        fontSize: FontSize.lg,
         color: Colors.text,
         textTransform: "uppercase",
+        marginTop: -2,
     },
     primaryText: {
         color: Colors.primary,
@@ -291,12 +342,20 @@ const styles = StyleSheet.create({
     qrButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: Colors.cta + "15",
+        backgroundColor: Colors.cta + "10",
         borderWidth: 1,
         borderColor: Colors.cta + "30",
-        padding: Spacing.xl,
+        padding: Spacing.lg,
         borderRadius: Radius.xl,
         gap: Spacing.lg,
+    },
+    qrIconBadge: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: Colors.cta + "20",
+        alignItems: "center",
+        justifyContent: "center",
     },
     buttonPressed: {
         opacity: 0.85,
@@ -318,41 +377,58 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     section: {
-        gap: Spacing.md,
+        gap: Spacing.lg,
     },
     sectionTitle: {
         fontFamily: "BarlowCondensed_700Bold",
-        fontSize: FontSize.xs,
-        color: Colors.textDim,
-        letterSpacing: 2,
+        fontSize: FontSize.sm,
+        color: Colors.textMuted,
+        letterSpacing: 1.5,
         marginBottom: Spacing.xs,
+        textTransform: "uppercase",
+    },
+    cardContainer: {
+        backgroundColor: Colors.surface,
+        borderRadius: Radius.xl,
+        padding: Spacing.xl,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     timelineItem: {
         flexDirection: "row",
-        gap: Spacing.md,
+        gap: Spacing.lg,
+    },
+    timelineIndicators: {
+        alignItems: "center",
+        width: 12,
     },
     timelineDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
         backgroundColor: Colors.primary,
-        marginTop: 5,
+        zIndex: 1,
+    },
+    timelineLine: {
+        flex: 1,
+        width: 2,
+        backgroundColor: Colors.border,
+        marginVertical: -4,
     },
     timelineContent: {
         flex: 1,
-        paddingBottom: Spacing.lg,
-        borderLeftWidth: 0,
+        paddingBottom: Spacing.xl,
     },
     timelineTime: {
-        fontFamily: "BarlowCondensed_600SemiBold",
-        fontSize: FontSize.sm,
+        fontFamily: "BarlowCondensed_700Bold",
+        fontSize: FontSize.base,
         color: Colors.primary,
         textTransform: "uppercase",
         letterSpacing: 0.5,
     },
     timelineActivity: {
-        fontFamily: "Barlow_600SemiBold",
-        fontSize: FontSize.base,
+        fontFamily: "Barlow_700Bold",
+        fontSize: FontSize.md,
         color: Colors.text,
         marginTop: 2,
     },
@@ -365,7 +441,7 @@ const styles = StyleSheet.create({
     detailRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingVertical: Spacing.sm,
+        paddingVertical: Spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: Colors.border,
     },
@@ -381,31 +457,45 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
     },
     inclusionsContainer: {
-        marginTop: Spacing.sm,
-        gap: 6,
+        marginTop: Spacing.xl,
+        gap: Spacing.md,
     },
-    inclusionItem: {
-        fontFamily: "Barlow_400Regular",
-        fontSize: FontSize.sm,
-        color: Colors.textMuted,
-        paddingLeft: Spacing.sm,
+    inclusionsList: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: Spacing.xs,
+    },
+    inclusionBadge: {
+        backgroundColor: Colors.background,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: 6,
+        borderRadius: Radius.sm,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    inclusionText: {
+        fontFamily: "BarlowCondensed_600SemiBold",
+        fontSize: FontSize.xs,
+        color: Colors.text,
+        textTransform: "uppercase",
     },
     liveButton: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: Colors.primary,
-        padding: Spacing.lg,
-        borderRadius: Radius.lg,
-        gap: Spacing.md,
-        marginBottom: Spacing["3xl"],
-    },
-    liveIcon: {
-        fontSize: 20,
+        padding: Spacing.xl,
+        borderRadius: Radius.xl,
+        gap: Spacing.lg,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     liveButtonText: {
         fontFamily: "BarlowCondensed_700Bold",
-        fontSize: FontSize.md,
+        fontSize: FontSize.lg,
         color: Colors.white,
         letterSpacing: 1,
     },

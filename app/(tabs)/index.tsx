@@ -224,12 +224,13 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
   },
   sectionHeader: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: FontSize.xs,
-    color: Colors.textDim,
-    letterSpacing: 2,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xs,
+    fontFamily: "BarlowCondensed_700Bold",
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    letterSpacing: 1.5,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.sm,
+    textTransform: "uppercase",
   },
   eventCard: {
     backgroundColor: Colors.surface,
@@ -284,9 +285,10 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontFamily: "BarlowCondensed_700Bold",
-    fontSize: 9,
+    fontSize: 11,
     color: Colors.white,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   cardContent: {
     padding: Spacing.lg,
@@ -298,14 +300,14 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textTransform: "uppercase",
     letterSpacing: -0.5,
-    lineHeight: 24,
+    lineHeight: 26,
   },
   eventMeta: {
     gap: 4,
   },
   metaText: {
     fontFamily: "Barlow_500Medium",
-    fontSize: FontSize.sm,
+    fontSize: FontSize.base,
     color: Colors.textMuted,
   },
   cardFooter: {
@@ -321,7 +323,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
   },
   categoryText: {
-    fontFamily: "BarlowCondensed_600SemiBold",
+    fontFamily: "BarlowCondensed_700Bold",
     fontSize: FontSize.xs,
     color: Colors.primary,
     textTransform: "uppercase",
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
   },
   raceNumber: {
     fontFamily: "BarlowCondensed_700Bold",
-    fontSize: FontSize.lg,
+    fontSize: FontSize.xl,
     color: Colors.primary,
   },
   emptyContainer: {
